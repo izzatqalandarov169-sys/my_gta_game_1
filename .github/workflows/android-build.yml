@@ -116,9 +116,11 @@ jobs:
           ls -lh "$HOME/.local/share/godot/export_templates/4.4.1.stable/"
           echo '--- Godot editor settings ---'
           grep -E 'export/android/(sdk_path|java_sdk_path|debug_keystore)' "$HOME/.config/godot/editor_settings-4.4.tres" || true
+          echo '--- Android project template check ---'
+          find android -maxdepth 2 -type f -print 2>/dev/null || true
           echo '--- Android export ---'
           set +e
-          godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --export-debug "Android" build/android/Uzbek-Legends-Open-World.apk --verbose 2>&1 | tee godot-android-export.log
+          godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --install-android-build-template --export-debug "Android" build/android/Uzbek-Legends-Open-World.apk --verbose 2>&1 | tee godot-android-export.log
           status=${PIPESTATUS[0]}
           set -e
           echo "Godot export exit code: $status"
