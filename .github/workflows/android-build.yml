@@ -54,12 +54,11 @@ jobs:
           mkdir -p "$HOME/.local/share/godot/export_templates/4.4.1.stable"
           cp -r /tmp/godot-templates/templates/* "$HOME/.local/share/godot/export_templates/4.4.1.stable/"
           printf '4.4.1.stable\n' > "$HOME/.local/share/godot/export_templates/4.4.1.stable/version.txt"
-          echo '--- Installed Godot Android templates ---'
+          echo '--- Installed Godot export templates ---'
           ls -lah "$HOME/.local/share/godot/export_templates/4.4.1.stable/"
           test -s "$HOME/.local/share/godot/export_templates/4.4.1.stable/android_debug.apk"
           test -s "$HOME/.local/share/godot/export_templates/4.4.1.stable/android_release.apk"
           test -s "$HOME/.local/share/godot/export_templates/4.4.1.stable/android_source.zip"
-          test -s "$HOME/.local/share/godot/export_templates/4.4.1.stable/version.txt"
 
       - name: Configure Android debug keystore
         run: |
@@ -91,29 +90,34 @@ jobs:
           export/android/shutdown_adb_on_exit = true
           EOF
           cp "$HOME/.config/godot/editor_settings-4.4.tres" "$HOME/.config/godot/editor_settings-4.tres"
-          echo '--- Godot editor settings ---'
-          cat "$HOME/.config/godot/editor_settings-4.4.tres"
+
+      - name: Install Godot Android project build template
+        run: |
+          rm -rf android
+          godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --editor --install-android-build-template
+          echo '--- Android project template ---'
+          find android -maxdepth 3 -type f -print | sort
+          test -f android/build.gradle
+          test -f android/settings.gradle
+          test -f android/gradlew
+          chmod +x android/gradlew
 
       - name: Validate Godot Android configuration
         run: |
-          mkdir -p build/android
           echo '--- Android environment ---'
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
           echo "JAVA_HOME=$JAVA_HOME"
           echo '--- Export preset ---'
           nl -ba export_presets.cfg
-          echo '--- Export templates ---'
-          ls -lh "$HOME/.local/share/godot/export_templates/4.4.1.stable/"
-          echo '--- Godot editor settings ---'
-          grep -E 'export/android/(sdk_path|java_sdk_path|debug_keystore)' "$HOME/.config/godot/editor_settings-4.4.tres"
+          echo '--- Android project template ---'
+          find android -maxdepth 2 -type f -print | sort
           echo '--- Godot version ---'
           godot/Godot_v4.4.1-stable_linux.x86_64 --version
 
       - name: Build APK
         run: |
           mkdir -p build/android
-          echo '--- Android export ---'
           set +e
           godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --export-debug "Android" build/android/Uzbek-Legends-Open-World.apk --verbose 2>&1 | tee godot-android-export.log
           status=${PIPESTATUS[0]}
@@ -121,7 +125,7 @@ jobs:
           echo "Godot export exit code: $status"
           if [ "$status" -ne 0 ]; then
             echo '--- configuration/error lines ---'
-            grep -Ei 'ERROR:|configuration|invalid|missing|Android|SDK|Java|template|keystore|build-tools|apksigner' godot-android-export.log || true
+            grep -Ei 'ERROR:|configuration|invalid|missing|Android|SDK|Java|template|keystore|build-tools|apksigner|gradle' godot-android-export.log || true
             exit "$status"
           fi
 
