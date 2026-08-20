@@ -16,10 +16,8 @@ var list_box: VBoxContainer
 var unlocked := false
 
 func _ready() -> void:
-    promo_system = PromoCodeSystem.new()
-    add_child(promo_system)
-    backend = AuthoritativeBackend.new()
-    add_child(backend)
+    promo_system = GameServices.promos
+    backend = GameServices.backend
     _build_ui()
 
 func _build_ui() -> void:
@@ -57,7 +55,7 @@ func _build_ui() -> void:
     code_input = _field(form, "Promo kodi")
     expiry_input = _field(form, "Muddat (unix)")
     price_input = _field(form, "Narx (UZS)")
-    reward_type_input = _field(form, "Mukofot turi")
+    reward_type_input = _field(form, "Mukofot turi: uzs / vehicle / weapon")
     reward_value_input = _field(form, "Mukofot qiymati")
 
     var create := Button.new()
@@ -100,14 +98,17 @@ func _create_promo() -> void:
     var code := code_input.text.strip_edges().to_upper()
     var expires := int(expiry_input.text)
     var price := int(price_input.text)
-    var reward_type := reward_type_input.text.strip_edges()
+    var reward_type := reward_type_input.text.strip_edges().to_lower()
     var reward_value := reward_value_input.text.strip_edges()
     if code.is_empty() or expires <= 0 or price < 0:
         status_label.text = "❌ Kod, muddat va UZS narxini tekshiring."
         return
+    if reward_type not in ["uzs", "vehicle", "weapon"] or reward_value.is_empty():
+        status_label.text = "❌ Mukofot turi yoki qiymati noto‘g‘ri."
+        return
     var reward := {"type": reward_type, "value": reward_value}
     if promo_system.create_promo(code, expires, price, reward):
-        status_label.text = "✅ %s promo yaratildi — %s so‘m." % [code, _money(price)]
+        status_label.text = "✅ %s promo yaratildi — %s." % [code, _money(price)]
         _refresh_list()
     else:
         status_label.text = "❌ Promo yaratilmadi."
@@ -119,7 +120,7 @@ func _refresh_list() -> void:
         child.queue_free()
     for promo in promo_system.list_promos():
         var row := Label.new()
-        row.text = "%s | %s so‘m | tugaydi: %s | mukofot: %s" % [promo.get("name", ""), _money(int(promo.get("price_uzs", 0))), str(promo.get("expires_at", "")), str(promo.get("reward", {}))]
+        row.text = "%s | %s | tugaydi: %s | mukofot: %s" % [promo.get("name", ""), _money(int(promo.get("price_uzs", 0))), str(promo.get("expires_at", "")), str(promo.get("reward", {}))]
         list_box.add_child(row)
 
 func _money(value: int) -> String:
