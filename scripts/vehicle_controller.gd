@@ -13,8 +13,20 @@ var throttle: float = 0.0
 var steering: float = 0.0
 var handbrake: bool = false
 var tuning: Dictionary = {"engine": 0, "brakes": 0, "tires": 0, "turbo": 0}
+var driver_active := false
+
+func set_driver_active(active: bool) -> void:
+    driver_active = active
+    if not active:
+        throttle = 0.0
+        steering = 0.0
+        velocity.x = 0.0
+        velocity.z = 0.0
 
 func _physics_process(delta: float) -> void:
+    if not driver_active:
+        return
+
     throttle = Input.get_axis("move_back", "move_forward")
     steering = Input.get_axis("move_left", "move_right")
     handbrake = Input.is_action_pressed("ui_accept")
