@@ -5,6 +5,9 @@ boot_splash/image="res://assets/splash.png"
 boot_splash/fullsize=true
 run/main_scene="res://scenes/MainMenu.tscn"
 
+[autoload]
+GameServices="*res://scripts/game_services.gd"
+
 [display]
 window/size/viewport_width=1280
 window/size/viewport_height=720
