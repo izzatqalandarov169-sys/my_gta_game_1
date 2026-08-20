@@ -50,6 +50,15 @@ jobs:
       - name: Validate project
         run: godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --editor --quit
 
+      - name: Diagnose Android export preset
+        run: |
+          echo '--- export_presets.cfg ---'
+          nl -ba export_presets.cfg
+          echo '--- Godot export list ---'
+          godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --export-debug
+          echo '--- export template files ---'
+          find "$HOME/.local/share/godot/export_templates/4.4.1.stable" -maxdepth 1 -type f -printf '%f\n' | sort
+
       - name: Build APK
         run: |
           mkdir -p build/android
