@@ -24,12 +24,13 @@ jobs:
       - name: Install Android SDK packages
         run: |
           yes | sdkmanager --licenses || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          sdkmanager "platform-tools" "platforms;android-34" "platforms;android-35" "build-tools;34.0.0" "build-tools;35.0.0"
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "JAVA_HOME=$JAVA_HOME"
           test -d "$ANDROID_HOME"
           test -d "$JAVA_HOME"
           test -x "$ANDROID_HOME/platform-tools/adb"
+          test -x "$ANDROID_HOME/build-tools/35.0.0/apksigner"
 
       - name: Install SVG to PNG converter
         run: |
@@ -45,11 +46,19 @@ jobs:
           unzip -q Godot_v4.4.1-stable_linux.x86_64.zip -d godot
           chmod +x godot/Godot_v4.4.1-stable_linux.x86_64
           wget -q https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz
-          mkdir -p "$HOME/.local/share/godot/export_templates/4.4.1.stable"
+          rm -rf /tmp/godot-templates
+          mkdir -p /tmp/godot-templates
           unzip -q Godot_v4.4.1-stable_export_templates.tpz -d /tmp/godot-templates
+          rm -rf "$HOME/.local/share/godot/export_templates/4.4.1.stable"
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.4.1.stable"
           cp -r /tmp/godot-templates/templates/* "$HOME/.local/share/godot/export_templates/4.4.1.stable/"
+          printf '4.4.1.stable\n' > "$HOME/.local/share/godot/export_templates/4.4.1.stable/version.txt"
+          echo '--- Installed Godot Android templates ---'
+          ls -lah "$HOME/.local/share/godot/export_templates/4.4.1.stable/"
           test -s "$HOME/.local/share/godot/export_templates/4.4.1.stable/android_debug.apk"
           test -s "$HOME/.local/share/godot/export_templates/4.4.1.stable/android_release.apk"
+          test -s "$HOME/.local/share/godot/export_templates/4.4.1.stable/android_source.zip"
+          test -s "$HOME/.local/share/godot/export_templates/4.4.1.stable/version.txt"
 
       - name: Configure Android debug keystore
         run: |
@@ -104,7 +113,7 @@ jobs:
           echo '--- Export preset ---'
           nl -ba export_presets.cfg
           echo '--- Export templates ---'
-          ls -lh "$HOME/.local/share/godot/export_templates/4.4.1.stable/android_debug.apk"
+          ls -lh "$HOME/.local/share/godot/export_templates/4.4.1.stable/"
           echo '--- Godot editor settings ---'
           grep -E 'export/android/(android_sdk_path|java_sdk_path|debug_keystore)' "$HOME/.config/godot/editor_settings-4.4.tres" || true
           echo '--- Android export ---'
@@ -115,7 +124,7 @@ jobs:
           echo "Godot export exit code: $status"
           if [ "$status" -ne 0 ]; then
             echo '--- configuration/error lines ---'
-            grep -Ei 'ERROR:|configuration|invalid|missing|Android|SDK|Java|template|keystore' godot-android-export.log || true
+            grep -Ei 'ERROR:|configuration|invalid|missing|Android|SDK|Java|template|keystore|build-tools|apksigner' godot-android-export.log || true
             exit "$status"
           fi
 
