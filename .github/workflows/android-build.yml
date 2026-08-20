@@ -26,13 +26,15 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Install image tools
-        run: sudo apt-get update && sudo apt-get install -y imagemagick
+      - name: Install SVG to PNG converter
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
 
       - name: Prepare PNG splash
         run: |
           mkdir -p assets
-          convert -background none assets/splash.svg -resize 1080x1920 assets/splash.png
+          rsvg-convert -w 1080 -h 1920 assets/splash.svg -o assets/splash.png
           file assets/splash.png
 
       - name: Install Godot editor and Android export templates
