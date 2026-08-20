@@ -25,9 +25,11 @@ func _ready() -> void:
 
 func _on_open_world() -> void:
     open_world_pressed.emit()
+    get_tree().change_scene_to_file("res://scenes/OpenWorld.tscn")
 
 func _on_multiplayer() -> void:
     multiplayer_pressed.emit()
+    get_tree().change_scene_to_file("res://scenes/OpenWorld.tscn")
 
 func _on_garage() -> void:
     garage_pressed.emit()
@@ -40,3 +42,4 @@ func _on_settings() -> void:
 
 func _on_quit() -> void:
     quit_pressed.emit()
+    get_tree().quit()
