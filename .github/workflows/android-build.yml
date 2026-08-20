@@ -1,0 +1,48 @@
+name: Android Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-android:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Install Godot
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip
+          unzip -q Godot_v4.4.1-stable_linux.x86_64.zip -d godot
+          chmod +x godot/Godot_v4.4.1-stable_linux.x86_64
+
+      - name: Import project
+        run: godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --editor --quit
+
+      - name: Build APK
+        run: |
+          mkdir -p build/android
+          godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --export-debug "Android" build/android/Uzbek-Legends-Open-World.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Uzbek-Legends-Android-APK
+          path: build/android/Uzbek-Legends-Open-World.apk
+          if-no-files-found: error
