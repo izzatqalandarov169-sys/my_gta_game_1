@@ -8,6 +8,8 @@ const MAX_REWARD_UZS := 1000000
 var balances_uzs: Dictionary = {}
 var players: Dictionary = {}
 var bans: Dictionary = {}
+var unlocked_vehicles: Dictionary = {}
+var unlocked_weapons: Dictionary = {}
 
 func _ready() -> void:
     load_state()
@@ -42,6 +44,29 @@ func spend_uzs(player_id: String, amount_uzs: int, reason: String = "purchase") 
     save_state()
     return true
 
+func unlock_item(player_id: String, item_type: String, item_id: String, reason: String = "reward") -> bool:
+    if bans.has(player_id) or item_id.strip_edges().is_empty():
+        return false
+    var target: Dictionary
+    if item_type == "vehicle":
+        target = unlocked_vehicles
+    elif item_type == "weapon":
+        target = unlocked_weapons
+    else:
+        return false
+    if not target.has(player_id):
+        target[player_id] = {}
+    target[player_id][item_id] = {"unlocked": true, "reason": reason, "time": Time.get_unix_time_from_system()}
+    save_state()
+    return true
+
+func has_item(player_id: String, item_type: String, item_id: String) -> bool:
+    if item_type == "vehicle":
+        return unlocked_vehicles.get(player_id, {}).has(item_id)
+    if item_type == "weapon":
+        return unlocked_weapons.get(player_id, {}).has(item_id)
+    return false
+
 func flag_player(player_id: String, reason: String) -> void:
     var state: Dictionary = players.get(player_id, {"connected": true, "violations": 0})
     state["violations"] = int(state.get("violations", 0)) + 1
@@ -57,7 +82,7 @@ func is_banned(player_id: String) -> bool:
 func save_state() -> void:
     var file := FileAccess.open(STATE_PATH, FileAccess.WRITE)
     if file:
-        file.store_string(JSON.stringify({"balances_uzs": balances_uzs, "players": players, "bans": bans}))
+        file.store_string(JSON.stringify({"balances_uzs": balances_uzs, "players": players, "bans": bans, "unlocked_vehicles": unlocked_vehicles, "unlocked_weapons": unlocked_weapons}))
         file.close()
 
 func load_state() -> void:
@@ -72,3 +97,5 @@ func load_state() -> void:
         balances_uzs = parsed.get("balances_uzs", {})
         players = parsed.get("players", {})
         bans = parsed.get("bans", {})
+        unlocked_vehicles = parsed.get("unlocked_vehicles", {})
+        unlocked_weapons = parsed.get("unlocked_weapons", {})
