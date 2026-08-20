@@ -14,12 +14,20 @@ var unlocked_weapons: Dictionary = {}
 func _ready() -> void:
     load_state()
 
+func _default_player() -> Dictionary:
+    return {"connected": true, "violations": 0}
+
+func _ensure_player(player_id: String) -> void:
+    if not players.has(player_id):
+        players[player_id] = _default_player()
+
 func register_player(player_id: String) -> void:
     if bans.has(player_id):
         return
     if not balances_uzs.has(player_id):
         balances_uzs[player_id] = STARTING_BALANCE_UZS
-    players[player_id] = {"connected": true, "violations": int(players.get(player_id, {}).get("violations", 0))}
+    _ensure_player(player_id)
+    players[player_id]["connected"] = true
     save_state()
 
 func get_balance_uzs(player_id: String) -> int:
@@ -30,7 +38,7 @@ func grant_uzs(player_id: String, amount_uzs: int, reason: String = "reward") ->
         flag_player(player_id, "invalid reward")
         return false
     balances_uzs[player_id] = get_balance_uzs(player_id) + amount_uzs
-    players.setdefault(player_id, {"connected": true, "violations": 0})
+    _ensure_player(player_id)
     players[player_id]["last_reward"] = reason
     save_state()
     return true
@@ -39,7 +47,7 @@ func spend_uzs(player_id: String, amount_uzs: int, reason: String = "purchase") 
     if amount_uzs < 0 or bans.has(player_id) or get_balance_uzs(player_id) < amount_uzs:
         return false
     balances_uzs[player_id] = get_balance_uzs(player_id) - amount_uzs
-    players.setdefault(player_id, {"connected": true, "violations": 0})
+    _ensure_player(player_id)
     players[player_id]["last_purchase"] = reason
     save_state()
     return true
@@ -68,7 +76,7 @@ func has_item(player_id: String, item_type: String, item_id: String) -> bool:
     return false
 
 func flag_player(player_id: String, reason: String) -> void:
-    var state: Dictionary = players.get(player_id, {"connected": true, "violations": 0})
+    var state: Dictionary = players.get(player_id, _default_player())
     state["violations"] = int(state.get("violations", 0)) + 1
     state["last_violation"] = reason
     players[player_id] = state
