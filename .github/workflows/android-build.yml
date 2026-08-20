@@ -61,24 +61,26 @@ jobs:
             -dname "CN=Android Debug,O=Android,C=US" \
             -noprompt
 
-      - name: Validate project
+      - name: Diagnose Godot Android export configuration
         env:
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ runner.temp }}/godot-debug.keystore
           GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           cp "$HOME/.android/debug.keystore" "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH"
-          godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --editor --quit
-
-      - name: Build APK
-        env:
-          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ runner.temp }}/godot-debug.keystore
-          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
-          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
-        run: |
+          echo '--- export presets ---'
+          nl -ba export_presets.cfg
+          echo '--- Godot export list ---'
+          godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --editor --quit-after 1 --verbose 2>&1 | tee godot-diagnose.log
+          echo '--- Godot Android export (diagnostic) ---'
           mkdir -p build/android
-          cp "$HOME/.android/debug.keystore" "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH"
-          godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --export-debug "Android" build/android/Uzbek-Legends-Open-World.apk
+          set +e
+          godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --export-debug "Android" build/android/diagnostic.apk --verbose 2>&1 | tee godot-export-diagnose.log
+          status=${PIPESTATUS[0]}
+          echo "Godot export exit code: $status"
+          echo '--- configuration/error lines ---'
+          grep -Ei 'configuration|invalid|error|keystore|sdk|template|android' godot-export-diagnose.log || true
+          exit "$status"
 
       - name: Verify APK
         run: |
