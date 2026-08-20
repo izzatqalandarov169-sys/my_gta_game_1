@@ -11,15 +11,28 @@ var driving_vehicle: VehicleController
 var interact_was_down := false
 var hud_label: Label
 var status_label: Label
+var low_end_device := false
 
 func _ready() -> void:
     randomize()
+    _detect_device_quality()
+    _configure_runtime_quality()
     _build_world()
     _spawn_player()
     spawn_manager = SpawnManager.new()
     add_child(spawn_manager)
+    spawn_manager.configure_for_device(low_end_device)
     spawn_manager.initialize(self, player)
     _build_ui()
+
+func _detect_device_quality() -> void:
+    var cores := OS.get_processor_count()
+    var screen := DisplayServer.screen_get_size()
+    low_end_device = OS.has_feature("mobile") and (cores <= 6 or screen.x <= 1280)
+
+func _configure_runtime_quality() -> void:
+    Engine.max_fps = 45 if low_end_device else 60
+    Engine.physics_ticks_per_second = 60 if not low_end_device else 45
 
 func _physics_process(delta: float) -> void:
     if player == null:
@@ -53,18 +66,41 @@ func _physics_process(delta: float) -> void:
 
 func _build_world() -> void:
     var env := WorldEnvironment.new()
+    env.name = "RealisticWorldEnvironment"
     var environment := Environment.new()
-    environment.background_mode = Environment.BG_COLOR
-    environment.background_color = Color(0.06, 0.10, 0.16)
-    environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-    environment.ambient_light_color = Color(0.65, 0.7, 0.8)
-    environment.ambient_light_energy = 0.8
+    environment.background_mode = Environment.BG_SKY
+
+    var sky := Sky.new()
+    var sky_material := ProceduralSkyMaterial.new()
+    sky_material.sky_top_color = Color("#17345b")
+    sky_material.sky_horizon_color = Color("#9fc3df")
+    sky_material.ground_bottom_color = Color("#182017")
+    sky_material.ground_horizon_color = Color("#72806f")
+    sky_material.sun_angle_max = 18.0
+    sky_material.sun_curve = 0.08
+    sky.sky_material = sky_material
+    environment.sky = sky
+    environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+    environment.ambient_light_energy = 0.72 if low_end_device else 0.9
+    environment.tonemap_mode = Environment.TONE_MAPPER_ACES
+    environment.tonemap_exposure = 1.08
+    environment.tonemap_white = 1.25
+    environment.fog_enabled = true
+    environment.fog_light_color = Color("#9fb8c9")
+    environment.fog_light_energy = 0.65
+    environment.fog_density = 0.006 if low_end_device else 0.0035
+    environment.fog_height = 0.0
+    environment.fog_height_density = 0.0
     env.environment = environment
     add_child(env)
 
     var sun := DirectionalLight3D.new()
-    sun.rotation_degrees = Vector3(-55, -25, 0)
-    sun.light_energy = 1.2
+    sun.name = "Sun"
+    sun.rotation_degrees = Vector3(-52, -28, 0)
+    sun.light_color = Color("#fff1d0")
+    sun.light_energy = 1.25
+    sun.shadow_enabled = not low_end_device
+    sun.directional_shadow_max_distance = 70.0 if low_end_device else 140.0
     add_child(sun)
 
     var ground := StaticBody3D.new()
@@ -74,6 +110,7 @@ func _build_world() -> void:
     box.size = Vector3(800, 1, 800)
     mesh.mesh = box
     mesh.position.y = -0.5
+    mesh.material_override = _material(Color("#4f6048"), 0.95)
     ground.add_child(mesh)
     var shape := CollisionShape3D.new()
     var collision := BoxShape3D.new()
@@ -82,19 +119,64 @@ func _build_world() -> void:
     shape.position.y = -0.5
     ground.add_child(shape)
     add_child(ground)
+    _build_roads()
 
-    for x in range(-20, 21):
-        for z in range(-20, 21):
+    var step := 4 if low_end_device else 2
+    for x in range(-20, 21, step):
+        for z in range(-20, 21, step):
             if abs(x) % 2 == 0 and abs(z) % 2 == 0:
                 _spawn_building(Vector3(x * 18, 0, z * 18))
+
+func _build_roads() -> void:
+    var road_material := _material(Color("#25282a"), 0.88)
+    var lane_material := _material(Color("#d7c982"), 0.7)
+    for i in range(-10, 11):
+        var road_x := MeshInstance3D.new()
+        var road_mesh := BoxMesh.new()
+        road_mesh.size = Vector3(12, 0.08, 800)
+        road_x.mesh = road_mesh
+        road_x.position = Vector3(i * 36, 0.02, 0)
+        road_x.material_override = road_material
+        add_child(road_x)
+
+        var line_x := MeshInstance3D.new()
+        var line_mesh_x := BoxMesh.new()
+        line_mesh_x.size = Vector3(0.12, 0.085, 800)
+        line_x.mesh = line_mesh_x
+        line_x.position = Vector3(i * 36, 0.07, 0)
+        line_x.material_override = lane_material
+        add_child(line_x)
+
+        var road_z := MeshInstance3D.new()
+        var road_mesh_z := BoxMesh.new()
+        road_mesh_z.size = Vector3(800, 0.08, 12)
+        road_z.mesh = road_mesh_z
+        road_z.position = Vector3(0, 0.025, i * 36)
+        road_z.material_override = road_material
+        add_child(road_z)
+
+        var line_z := MeshInstance3D.new()
+        var line_mesh_z := BoxMesh.new()
+        line_mesh_z.size = Vector3(800, 0.085, 0.12)
+        line_z.mesh = line_mesh_z
+        line_z.position = Vector3(0, 0.07, i * 36)
+        line_z.material_override = lane_material
+        add_child(line_z)
+
+func _material(color: Color, roughness: float) -> StandardMaterial3D:
+    var material := StandardMaterial3D.new()
+    material.albedo_color = color
+    material.roughness = roughness
+    return material
 
 func _spawn_building(pos: Vector3) -> void:
     var body := StaticBody3D.new()
     var mesh := MeshInstance3D.new()
     var box := BoxMesh.new()
-    box.size = Vector3(8, randf_range(5, 24), 8)
+    box.size = Vector3(randf_range(8.0, 13.0), randf_range(6.0, 28.0), randf_range(8.0, 13.0))
     mesh.mesh = box
     mesh.position.y = box.size.y / 2.0
+    mesh.material_override = _material(Color.from_hsv(randf_range(0.52, 0.62), 0.10, randf_range(0.32, 0.55)), 0.72)
     body.add_child(mesh)
     var shape := CollisionShape3D.new()
     var collision := BoxShape3D.new()
@@ -113,6 +195,7 @@ func _spawn_player() -> void:
     capsule.height = 1.8
     capsule.radius = 0.35
     mesh.mesh = capsule
+    mesh.material_override = _material(Color("#d9b08c"), 0.65)
     mesh.position.y = 0.9
     player.add_child(mesh)
     var shape := CollisionShape3D.new()
@@ -128,6 +211,8 @@ func _spawn_player() -> void:
     var camera := Camera3D.new()
     camera.name = "ThirdPersonCamera"
     camera.position = Vector3(0, 5.5, 8)
+    camera.fov = 68.0
+    camera.current = true
     camera.look_at_from_position(camera.position, player.position + Vector3(0, 1, 0))
     player.add_child(camera)
 
