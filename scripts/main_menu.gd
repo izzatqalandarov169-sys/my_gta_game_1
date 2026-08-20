@@ -3,7 +3,6 @@ class_name MainMenu
 
 signal open_world_pressed
 signal multiplayer_pressed
-auto
 signal garage_pressed
 signal weapon_shop_pressed
 signal settings_pressed
@@ -95,7 +94,7 @@ func _activate_promo() -> void:
     var result := GameServices.redeem_promo(PLAYER_ID, code)
     if bool(result.get("ok", false)):
         var reward: Dictionary = result.get("reward", {})
-        promo_status.text = "✅ Promo faollashtirildi!\nMukofot: %s\nBalans: %s so‘m" % [str(reward), _money(int(reward.get("balance_uzs", 0)))]
+        promo_status.text = "✅ Promo faollashtirildi!\nMukofot: %s\nBalans: %s" % [str(reward), _money(int(reward.get("balance_uzs", 0)))]
         promo_input.clear()
     else:
         var reason := str(result.get("reason", "unknown"))
@@ -109,7 +108,12 @@ func _activate_promo() -> void:
         promo_status.text = str(messages.get(reason, "❌ Promo kod qabul qilinmadi."))
 
 func _money(value: int) -> String:
-    return "{0}".format([value]).insert(0, "")
+    var text := str(value)
+    var result := ""
+    while text.length() > 3:
+        result = " " + text.substr(text.length() - 3, 3) + result
+        text = text.substr(0, text.length() - 3)
+    return text + result + " so‘m"
 
 func _on_open_world() -> void:
     open_world_pressed.emit()
