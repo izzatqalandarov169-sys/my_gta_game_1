@@ -5,11 +5,14 @@ var speed := 7.0
 var gravity := 18.0
 var money := 1000
 var wanted := 0
+var spawn_manager: SpawnManager
 
 func _ready():
     _build_world()
     _spawn_player()
-    _spawn_npcs(30)
+    spawn_manager = SpawnManager.new()
+    add_child(spawn_manager)
+    spawn_manager.initialize(self, player)
     _build_ui()
 
 func _physics_process(delta):
@@ -43,32 +46,34 @@ func _build_world():
     sun.light_energy = 1.2
     add_child(sun)
 
+    # Large open-world foundation: 800 x 800 meters.
     var ground = StaticBody3D.new()
-    ground.name = "Ground"
+    ground.name = "OpenWorldGround"
     var mesh = MeshInstance3D.new()
     var box = BoxMesh.new()
-    box.size = Vector3(160, 1, 160)
+    box.size = Vector3(800, 1, 800)
     mesh.mesh = box
     mesh.position.y = -0.5
     ground.add_child(mesh)
     var shape = CollisionShape3D.new()
     var collision = BoxShape3D.new()
-    collision.size = Vector3(160, 1, 160)
+    collision.size = Vector3(800, 1, 800)
     shape.shape = collision
     shape.position.y = -0.5
     ground.add_child(shape)
     add_child(ground)
 
-    for x in range(-5, 6):
-        for z in range(-5, 6):
+    # Procedural city blocks across the open world.
+    for x in range(-20, 21):
+        for z in range(-20, 21):
             if abs(x) % 2 == 0 and abs(z) % 2 == 0:
-                _spawn_building(Vector3(x * 12, 3, z * 12))
+                _spawn_building(Vector3(x * 18, 0, z * 18))
 
 func _spawn_building(pos: Vector3):
     var body = StaticBody3D.new()
     var mesh = MeshInstance3D.new()
     var box = BoxMesh.new()
-    box.size = Vector3(7, randf_range(5, 18), 7)
+    box.size = Vector3(8, randf_range(5, 24), 8)
     mesh.mesh = box
     mesh.position.y = box.size.y / 2.0
     body.add_child(mesh)
@@ -106,31 +111,10 @@ func _spawn_player():
     camera.look_at_from_position(camera.position, player.position + Vector3(0, 1, 0))
     player.add_child(camera)
 
-func _spawn_npcs(count: int):
-    for i in count:
-        var npc = CharacterBody3D.new()
-        npc.name = "NPC_%03d" % i
-        var mesh = MeshInstance3D.new()
-        var capsule = CapsuleMesh.new()
-        capsule.height = 1.7
-        capsule.radius = 0.3
-        mesh.mesh = capsule
-        mesh.position.y = 0.85
-        npc.add_child(mesh)
-        var shape = CollisionShape3D.new()
-        var cs = CapsuleShape3D.new()
-        cs.height = 1.7
-        cs.radius = 0.3
-        shape.shape = cs
-        shape.position.y = 0.85
-        npc.add_child(shape)
-        npc.position = Vector3(randf_range(-55,55), 0, randf_range(-55,55))
-        add_child(npc)
-
 func _build_ui():
     var ui = CanvasLayer.new()
     var label = Label.new()
-    label.text = "UZBEKISTAN GALAXY  |  OFFLINE PROTOTYPE\n$ %d    WANTED: %d\nWASD — yurish" % [money, wanted]
+    label.text = "UZBEKISTAN GALAXY | OPEN WORLD\n$ %d    WANTED: %d\nNPC: 1000    VEHICLES: 80\nWASD — yurish" % [money, wanted]
     label.position = Vector2(25, 25)
     label.add_theme_font_size_override("font_size", 22)
     ui.add_child(label)
