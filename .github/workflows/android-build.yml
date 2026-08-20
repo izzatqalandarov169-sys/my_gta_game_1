@@ -26,6 +26,15 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Install image tools
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+
+      - name: Prepare PNG splash
+        run: |
+          mkdir -p assets
+          convert -background none assets/splash.svg -resize 1080x1920 assets/splash.png
+          file assets/splash.png
+
       - name: Install Godot editor and Android export templates
         run: |
           wget -q https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip
