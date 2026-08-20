@@ -26,6 +26,7 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-34" "platforms;android-35" "build-tools;34.0.0" "build-tools;35.0.0"
           echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
           echo "JAVA_HOME=$JAVA_HOME"
           test -d "$ANDROID_HOME"
           test -d "$JAVA_HOME"
@@ -76,9 +77,6 @@ jobs:
           test -s "$HOME/.android/debug.keystore"
 
       - name: Configure Godot Android editor settings
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
-          JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
           mkdir -p "$HOME/.config/godot"
           cat > "$HOME/.config/godot/editor_settings-4.4.tres" <<EOF
@@ -96,15 +94,8 @@ jobs:
           echo '--- Godot editor settings ---'
           cat "$HOME/.config/godot/editor_settings-4.4.tres"
 
-      - name: Build APK
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
-          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ runner.temp }}/godot-debug.keystore
-          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
-          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+      - name: Validate Godot Android configuration
         run: |
-          cp "$HOME/.android/debug.keystore" "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH"
           mkdir -p build/android
           echo '--- Android environment ---'
           echo "ANDROID_HOME=$ANDROID_HOME"
@@ -115,12 +106,16 @@ jobs:
           echo '--- Export templates ---'
           ls -lh "$HOME/.local/share/godot/export_templates/4.4.1.stable/"
           echo '--- Godot editor settings ---'
-          grep -E 'export/android/(sdk_path|java_sdk_path|debug_keystore)' "$HOME/.config/godot/editor_settings-4.4.tres" || true
-          echo '--- Android project template check ---'
-          find android -maxdepth 2 -type f -print 2>/dev/null || true
+          grep -E 'export/android/(sdk_path|java_sdk_path|debug_keystore)' "$HOME/.config/godot/editor_settings-4.4.tres"
+          echo '--- Godot version ---'
+          godot/Godot_v4.4.1-stable_linux.x86_64 --version
+
+      - name: Build APK
+        run: |
+          mkdir -p build/android
           echo '--- Android export ---'
           set +e
-          godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --install-android-build-template --export-debug "Android" build/android/Uzbek-Legends-Open-World.apk --verbose 2>&1 | tee godot-android-export.log
+          godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --export-debug "Android" build/android/Uzbek-Legends-Open-World.apk --verbose 2>&1 | tee godot-android-export.log
           status=${PIPESTATUS[0]}
           set -e
           echo "Godot export exit code: $status"
