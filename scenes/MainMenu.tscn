@@ -4,11 +4,16 @@
 [ext_resource type="Texture2D" path="res://assets/splash.svg" id="2_splash"]
 
 [sub_resource type="StyleBoxFlat" id="ButtonStyle"]
-bg_color = Color(0.08, 0.08, 0.1, 0.94)
-corner_radius_top_left = 14
-corner_radius_top_right = 14
-corner_radius_bottom_right = 14
-corner_radius_bottom_left = 14
+bg_color = Color(0.05, 0.06, 0.08, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 0.22)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -38,53 +43,101 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.38)
+color = Color(0, 0, 0, 0.46)
 mouse_filter = 2
 
-[node name="Center" type="CenterContainer" parent="."]
+[node name="Header" type="VBoxContainer" parent="."]
 layout_mode = 1
-anchors_preset = 15
+anchors_preset = 10
 anchor_right = 1.0
-anchor_bottom = 1.0
+offset_top = 46.0
+offset_bottom = 142.0
 grow_horizontal = 2
-grow_vertical = 2
 
-[node name="VBox" type="VBoxContainer" parent="Center"]
-custom_minimum_size = Vector2(360, 0)
-layout_mode = 2
-theme_override_constants/separation = 18
-
-[node name="Title" type="Label" parent="Center/VBox"]
+[node name="Title" type="Label" parent="Header"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 34
+theme_override_font_sizes/font_size = 42
 text = "UZBEK LEGENDS"
 horizontal_alignment = 1
 
-[node name="Subtitle" type="Label" parent="Center/VBox"]
+[node name="Subtitle" type="Label" parent="Header"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
+theme_override_colors/font_color = Color(0.88, 0.88, 0.88, 1)
 theme_override_font_sizes/font_size = 18
 text = "OPEN WORLD"
 horizontal_alignment = 1
 
-[node name="StartButton" type="Button" parent="Center/VBox"]
-custom_minimum_size = Vector2(0, 64)
-layout_mode = 2
-theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("ButtonStyle")
-text = "BOSHLASH"
+[node name="MenuGrid" type="GridContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -360.0
+offset_top = -105.0
+offset_right = 360.0
+offset_bottom = 105.0
+grow_horizontal = 2
+grow_vertical = 2
+columns = 2
+theme_override_constants/h_separation = 22
+theme_override_constants/v_separation = 22
 
-[node name="SettingsButton" type="Button" parent="Center/VBox"]
-custom_minimum_size = Vector2(0, 58)
+[node name="OpenWorldButton" type="Button" parent="MenuGrid"]
+custom_minimum_size = Vector2(340, 92)
 layout_mode = 2
-theme_override_font_sizes/font_size = 19
+theme_override_font_sizes/font_size = 25
+theme_override_styles/normal = SubResource("ButtonStyle")
+text = "OPEN WORLD"
+
+[node name="MultiplayerButton" type="Button" parent="MenuGrid"]
+custom_minimum_size = Vector2(340, 92)
+layout_mode = 2
+theme_override_font_sizes/font_size = 25
+theme_override_styles/normal = SubResource("ButtonStyle")
+text = "MULTIPLAYER"
+
+[node name="GarageButton" type="Button" parent="MenuGrid"]
+custom_minimum_size = Vector2(340, 92)
+layout_mode = 2
+theme_override_font_sizes/font_size = 25
+theme_override_styles/normal = SubResource("ButtonStyle")
+text = "GARAJ"
+
+[node name="WeaponShopButton" type="Button" parent="MenuGrid"]
+custom_minimum_size = Vector2(340, 92)
+layout_mode = 2
+theme_override_font_sizes/font_size = 25
+theme_override_styles/normal = SubResource("ButtonStyle")
+text = "QUROL DO‘KONI"
+
+[node name="Bottom" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -180.0
+offset_top = -86.0
+offset_right = 180.0
+offset_bottom = -26.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 14
+
+[node name="SettingsButton" type="Button" parent="Bottom"]
+custom_minimum_size = Vector2(170, 56)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("ButtonStyle")
 text = "SOZLAMALAR"
 
-[node name="QuitButton" type="Button" parent="Center/VBox"]
-custom_minimum_size = Vector2(0, 58)
+[node name="QuitButton" type="Button" parent="Bottom"]
+custom_minimum_size = Vector2(170, 56)
 layout_mode = 2
-theme_override_font_sizes/font_size = 19
+theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("ButtonStyle")
 text = "CHIQISH"
