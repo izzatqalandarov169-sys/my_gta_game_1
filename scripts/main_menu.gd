@@ -3,6 +3,7 @@ class_name MainMenu
 
 signal open_world_pressed
 signal multiplayer_pressed
+auto
 signal garage_pressed
 signal weapon_shop_pressed
 signal settings_pressed
@@ -20,10 +21,11 @@ var promo_system: PromoCodeSystem
 var promo_popup: PanelContainer
 var promo_input: LineEdit
 var promo_status: Label
+const PLAYER_ID := "local_player"
 
 func _ready() -> void:
-    promo_system = PromoCodeSystem.new()
-    add_child(promo_system)
+    promo_system = GameServices.promos
+    GameServices.register_player(PLAYER_ID)
     open_world_button.pressed.connect(_on_open_world)
     multiplayer_button.pressed.connect(_on_multiplayer)
     garage_button.pressed.connect(_on_garage)
@@ -90,19 +92,24 @@ func _activate_promo() -> void:
         promo_status.text = "❌ Kodni kiriting."
         return
 
-    var result := promo_system.redeem_promo(code)
+    var result := GameServices.redeem_promo(PLAYER_ID, code)
     if bool(result.get("ok", false)):
         var reward: Dictionary = result.get("reward", {})
-        promo_status.text = "✅ Promo faollashtirildi!\nMukofot: %s" % str(reward)
+        promo_status.text = "✅ Promo faollashtirildi!\nMukofot: %s\nBalans: %s so‘m" % [str(reward), _money(int(reward.get("balance_uzs", 0)))]
         promo_input.clear()
     else:
         var reason := str(result.get("reason", "unknown"))
         var messages := {
             "not_found": "❌ Bunday promo kod topilmadi.",
             "expired": "⏰ Promo kod muddati tugagan.",
-            "already_used": "⚠️ Bu promo kod allaqachon ishlatilgan."
+            "already_used": "⚠️ Bu promo kod allaqachon ishlatilgan.",
+            "banned": "🚫 Hisob bloklangan.",
+            "reward_rejected": "❌ Mukofot server tomonidan rad etildi."
         }
         promo_status.text = str(messages.get(reason, "❌ Promo kod qabul qilinmadi."))
+
+func _money(value: int) -> String:
+    return "{0}".format([value]).insert(0, "")
 
 func _on_open_world() -> void:
     open_world_pressed.emit()
