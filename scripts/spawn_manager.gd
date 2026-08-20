@@ -11,6 +11,16 @@ var player: Node3D
 var npc_parent: Node3D
 var vehicle_parent: Node3D
 
+func configure_for_device(low_end: bool) -> void:
+    if low_end:
+        npc_target_count = 45
+        vehicle_target_count = 14
+        npc_spawn_radius = 55.0
+    else:
+        npc_target_count = 120
+        vehicle_target_count = 30
+        npc_spawn_radius = 75.0
+
 func initialize(world: Node3D, player_node: Node3D) -> void:
     player = player_node
     npc_parent = Node3D.new()
@@ -74,6 +84,11 @@ func _spawn_vehicle(index: int) -> void:
     box.size = Vector3(1.8, 0.7, 3.8)
     mesh.mesh = box
     mesh.position.y = 0.5
+    var material := StandardMaterial3D.new()
+    material.albedo_color = Color.from_hsv(float(index % 12) / 12.0, 0.55, 0.78)
+    material.metallic = 0.15
+    material.roughness = 0.42
+    mesh.material_override = material
     vehicle.add_child(mesh)
 
     var collision := CollisionShape3D.new()
