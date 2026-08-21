@@ -1,6 +1,39 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/open_world_controller.gd" id="1_main"]
 
+[sub_resource type="Environment" id="Environment_fallback"]
+background_mode = 1
+background_color = Color(0.035, 0.06, 0.08, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.55, 0.62, 0.72, 1)
+ambient_light_energy = 0.8
+
+[sub_resource type="BoxMesh" id="GroundMesh"]
+size = Vector3(800, 0.2, 800)
+
+[sub_resource type="StandardMaterial3D" id="GroundMaterial"]
+albedo_color = Color(0.12, 0.14, 0.16, 1)
+roughness = 0.95
+
 [node name="OpenWorld" type="Node3D"]
 script = ExtResource("1_main")
+
+[node name="FallbackEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_fallback")
+
+[node name="FallbackSun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-55, -30, 0)
+light_energy = 1.1
+shadow_enabled = true
+
+[node name="FallbackGround" type="MeshInstance3D" parent="."]
+mesh = SubResource("GroundMesh")
+material_override = SubResource("GroundMaterial")
+position = Vector3(0, -0.6, 0)
+
+[node name="FallbackCamera" type="Camera3D" parent="."]
+position = Vector3(0, 5, 12)
+rotation_degrees = Vector3(-12, 180, 0)
+fov = 65
+current = true
