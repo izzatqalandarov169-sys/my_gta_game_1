@@ -13,6 +13,21 @@ func register_player(player_id: String) -> void:
     if backend != null:
         backend.register_player(player_id)
 
+func get_balance_uzs(player_id: String) -> int:
+    if backend == null:
+        return 0
+    return backend.get_balance_uzs(player_id)
+
+func owns(player_id: String, item_type: String, item_id: String) -> bool:
+    if backend == null:
+        return false
+    return backend.has_item(player_id, item_type, item_id)
+
+func buy(player_id: String, item_type: String, item_id: String, price_uzs: int) -> Dictionary:
+    if backend == null:
+        return {"ok": false, "reason": "services_not_ready"}
+    return backend.buy_item(player_id, item_type, item_id, price_uzs)
+
 func redeem_promo(player_id: String, code: String) -> Dictionary:
     if backend == null or promos == null:
         return {"ok": false, "reason": "services_not_ready"}
