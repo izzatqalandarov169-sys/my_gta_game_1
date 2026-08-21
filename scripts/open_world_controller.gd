@@ -9,6 +9,8 @@ var yaw := 0.0
 var pitch := -12.0
 var low_end := false
 var hud: Label
+var weapon_cooldown := 0.0
+var wanted := 0
 
 func _ready() -> void:
     var cores := OS.get_processor_count()
@@ -20,13 +22,16 @@ func _ready() -> void:
     _player()
     _npcs()
     _cars()
+    _city_details()
     _hud()
     controls = MobileControls.new()
+    controls.add_to_group("mobile_controls")
     add_child(controls)
     controls.look_changed.connect(_look)
     controls.action_pressed.connect(_action)
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
+    weapon_cooldown = maxf(0.0, weapon_cooldown - delta)
     if player == null or controls == null:
         return
     if driving_vehicle != null:
@@ -85,6 +90,32 @@ func _building(pos: Vector3) -> void:
     var color := Color.from_hsv(randf_range(0.53, 0.62), 0.12, randf_range(0.32, 0.56))
     _box(size, pos + Vector3(0, size.y * 0.5, 0), _mat(color, 0.72), true)
 
+func _city_details() -> void:
+    var limit := 4 if low_end else 6
+    for x in range(-limit, limit + 1):
+        for z in range(-limit, limit + 1):
+            if (abs(x) + abs(z)) % 3 == 0:
+                var p := Vector3(x * 48.0 + 10.0, 0, z * 48.0 + 10.0)
+                _lamp(p)
+            if (x + z) % 4 == 0:
+                _tree(Vector3(x * 48.0 + 5.0, 0, z * 48.0 + 5.0))
+
+func _lamp(pos: Vector3) -> void:
+    _box(Vector3(0.12, 4.0, 0.12), pos + Vector3(0, 2, 0), _mat(Color("#25292b"), 0.5), false)
+    var light := OmniLight3D.new()
+    light.position = pos + Vector3(0, 4.0, 0)
+    light.light_energy = 0.5 if low_end else 0.8
+    light.omni_range = 7.0 if low_end else 10.0
+    light.light_color = Color("#ffdca0")
+    add_child(light)
+
+func _tree(pos: Vector3) -> void:
+    _box(Vector3(0.35, 2.0, 0.35), pos + Vector3(0, 1, 0), _mat(Color("#493425"), 0.9), false)
+    var crown := SphereMesh.new()
+    crown.radius = 1.3
+    crown.height = 2.6
+    _primitive_named(self, "TreeCrown", crown, pos + Vector3(0, 2.7, 0), _mat(Color("#315b32"), 0.95))
+
 func _player() -> void:
     player = PlayerController.new()
     player.name = "Player"
@@ -96,6 +127,7 @@ func _player() -> void:
     shape.position.y = 0.9
     player.add_child(shape)
     _human(player, Color("#204c82"))
+    _add_player_weapon()
     player.position = Vector3(0, 0, 12)
     add_child(player)
     pivot = Node3D.new()
@@ -107,6 +139,17 @@ func _player() -> void:
     camera.fov = 66
     camera.current = true
     pivot.add_child(camera)
+
+func _add_player_weapon() -> void:
+    var gun := MeshInstance3D.new()
+    gun.name = "MobileRifle"
+    var mesh := BoxMesh.new()
+    mesh.size = Vector3(0.12, 0.16, 0.75)
+    gun.mesh = mesh
+    gun.position = Vector3(0.52, 1.12, -0.38)
+    gun.rotation_degrees = Vector3(0, 0, -8)
+    gun.material_override = _mat(Color("#16191d"), 0.35)
+    player.add_child(gun)
 
 func _human(root: Node3D, shirt_color: Color) -> void:
     var body := CapsuleMesh.new()
@@ -145,7 +188,7 @@ func _npcs() -> void:
         npc.name = "Citizen_%02d" % i
         npc.add_to_group("npc")
         npc.position = Vector3(randf_range(-130, 130), 0, randf_range(-130, 130))
-        npc.setup(["calm", "clever", "brave", "fearful"][i % 4], float(i % 8) / 10.0, 0.6, i % 5 == 0)
+        npc.setup(["calm", "clever", "brave", "fearful"][i % 4], float(i % 8) / 10.0, 0.6, i % 3 == 0)
         add_child(npc)
         _human(npc, Color.from_hsv(float(i % 8) / 8.0, 0.55, 0.75))
         var collision := CollisionShape3D.new()
@@ -155,6 +198,25 @@ func _npcs() -> void:
         collision.shape = capsule
         collision.position.y = 0.85
         npc.add_child(collision)
+        if npc.weapon_capable:
+            _add_npc_weapon(npc)
+        npc.npc_action.connect(_on_npc_action.bind(npc))
+
+func _add_npc_weapon(npc: SmartNPC) -> void:
+    var gun := MeshInstance3D.new()
+    gun.name = "NPCWeapon"
+    var mesh := BoxMesh.new()
+    mesh.size = Vector3(0.1, 0.13, 0.6)
+    gun.mesh = mesh
+    gun.position = Vector3(0.38, 1.12, -0.34)
+    gun.material_override = _mat(Color("#111318"), 0.3)
+    npc.add_child(gun)
+
+func _on_npc_action(action: String, npc: SmartNPC) -> void:
+    if action == "combat":
+        npc.current_action = "jangovar"
+    elif action == "fire":
+        _draw_tracer(npc.global_position + Vector3.UP * 1.2, npc.target.global_position + Vector3.UP * 1.0)
 
 func _cars() -> void:
     var count := 5 if low_end else 10
@@ -165,14 +227,43 @@ func _cars() -> void:
         car.position = Vector3(randf_range(-110, 110), 0, randf_range(-110, 110))
         car.max_speed = 45.0 + float(i % 5) * 5.0
         add_child(car)
-        _box(Vector3(2, 0.65, 4.1), Vector3(0, 0.55, 0), _mat(Color.from_hsv(float(i % 10) / 10.0, 0.7, 0.82), 0.38), false, car)
-        _box(Vector3(1.55, 0.58, 1.9), Vector3(0, 1.02, 0.15), _mat(Color("#17232d"), 0.25), false, car)
+        var paint := _mat(Color.from_hsv(float(i % 10) / 10.0, 0.7, 0.82), 0.28)
+        _box(Vector3(2.05, 0.65, 4.2), Vector3(0, 0.55, 0), paint, false, car)
+        _box(Vector3(1.55, 0.58, 1.9), Vector3(0, 1.02, 0.15), _mat(Color("#17232d"), 0.2), false, car)
+        _car_wheel(car, Vector3(-1.0, 0.38, -1.35))
+        _car_wheel(car, Vector3(1.0, 0.38, -1.35))
+        _car_wheel(car, Vector3(-1.0, 0.38, 1.35))
+        _car_wheel(car, Vector3(1.0, 0.38, 1.35))
+        _car_light(car, Vector3(-0.62, 0.65, -2.1), Color("#f8f4d0"))
+        _car_light(car, Vector3(0.62, 0.65, -2.1), Color("#f8f4d0"))
         var collision := CollisionShape3D.new()
         var shape := BoxShape3D.new()
-        shape.size = Vector3(2, 0.9, 4.1)
+        shape.size = Vector3(2.05, 0.9, 4.2)
         collision.shape = shape
         collision.position.y = 0.55
         car.add_child(collision)
+
+func _car_wheel(car: Node3D, pos: Vector3) -> void:
+    var wheel := MeshInstance3D.new()
+    var mesh := CylinderMesh.new()
+    mesh.top_radius = 0.38
+    mesh.bottom_radius = 0.38
+    mesh.height = 0.24
+    mesh.radial_segments = 12
+    wheel.mesh = mesh
+    wheel.position = pos
+    wheel.rotation_degrees = Vector3(90, 0, 0)
+    wheel.material_override = _mat(Color("#101216"), 0.85)
+    car.add_child(wheel)
+
+func _car_light(car: Node3D, pos: Vector3, color: Color) -> void:
+    var lamp := MeshInstance3D.new()
+    var mesh := BoxMesh.new()
+    mesh.size = Vector3(0.34, 0.18, 0.08)
+    lamp.mesh = mesh
+    lamp.position = pos
+    lamp.material_override = _mat(color, 0.18)
+    car.add_child(lamp)
 
 func _box(size: Vector3, pos: Vector3, material: Material, collision := false, parent: Node = null) -> void:
     var target: Node = self if parent == null else parent
@@ -219,7 +310,7 @@ func _update_hud() -> void:
     var speed := 0
     if driving_vehicle != null:
         speed = int(driving_vehicle.get_speed_kmh())
-    hud.text = "UZBEK LEGENDS | 1000 so‘m | WANTED 0\n%02d AI NPC | %02d AVTO | %s %d km/soat" % [get_tree().get_nodes_in_group("npc").size(), get_tree().get_nodes_in_group("vehicle").size(), mode, speed]
+    hud.text = "UZBEK LEGENDS | SO‘M | WANTED %d\n%02d AI NPC | %02d AVTO | %s %d km/soat" % [wanted, get_tree().get_nodes_in_group("npc").size(), get_tree().get_nodes_in_group("vehicle").size(), mode, speed]
 
 func _look(delta: Vector2) -> void:
     yaw -= delta.x * 0.18
@@ -232,8 +323,47 @@ func _action(action: String) -> void:
         driving_vehicle.mobile_brake = true
     elif action == "jump" and driving_vehicle == null:
         player.jump()
-    elif action == "fire":
-        hud.text = "🔫 QUROL TAYYOR • AI/NPC faol"
+    elif action == "fire" and driving_vehicle == null:
+        _fire_weapon()
+
+func _fire_weapon() -> void:
+    if weapon_cooldown > 0.0 or player == null or camera == null:
+        return
+    weapon_cooldown = 0.22
+    wanted = mini(wanted + 1, 5)
+    var origin := camera.global_position
+    var direction := -camera.global_transform.basis.z
+    var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * 120.0)
+    query.exclude = [player]
+    var hit := get_world_3d().direct_space_state.intersect_ray(query)
+    var end_point := origin + direction * 120.0
+    if not hit.is_empty():
+        end_point = hit["position"]
+        var target := hit["collider"]
+        if target is SmartNPC:
+            target.take_damage(35.0)
+        else:
+            var parent := target.get_parent()
+            if parent is SmartNPC:
+                parent.take_damage(35.0)
+    _draw_tracer(origin, end_point)
+    for node in get_tree().get_nodes_in_group("npc"):
+        var npc := node as SmartNPC
+        if npc != null and npc.global_position.distance_to(player.global_position) < 55.0:
+            npc.react_to_crime(player)
+    hud.text = "🔫 O‘Q UZILDI • NPC LAR REAKSIYA QILMOQDA"
+
+func _draw_tracer(from: Vector3, to: Vector3) -> void:
+    var line := ImmediateMesh.new()
+    line.surface_begin(Mesh.PRIMITIVE_LINES)
+    line.surface_set_color(Color("#ffd86b"))
+    line.surface_add_vertex(from)
+    line.surface_add_vertex(to)
+    line.surface_end()
+    var mesh_instance := MeshInstance3D.new()
+    mesh_instance.mesh = line
+    add_child(mesh_instance)
+    get_tree().create_timer(0.045).timeout.connect(mesh_instance.queue_free)
 
 func _toggle_vehicle() -> void:
     if driving_vehicle != null:
