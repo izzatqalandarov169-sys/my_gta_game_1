@@ -9,9 +9,10 @@ class_name VehicleController
 @export var handbrake_traction: float = 1.8
 @export var reverse_speed: float = 18.0
 
-var throttle: float = 0.0
-var steering: float = 0.0
-var handbrake: bool = false
+var throttle := 0.0
+var steering := 0.0
+var handbrake := false
+var mobile_brake := false
 var tuning: Dictionary = {"engine": 0, "brakes": 0, "tires": 0, "turbo": 0}
 var driver_active := false
 
@@ -27,25 +28,32 @@ func _physics_process(delta: float) -> void:
     if not driver_active:
         return
 
-    throttle = Input.get_axis("move_back", "move_forward")
-    steering = Input.get_axis("move_left", "move_right")
-    handbrake = Input.is_action_pressed("ui_accept")
+    var mobile := get_tree().get_first_node_in_group("mobile_controls") as MobileControls
+    if mobile != null:
+        throttle = -mobile.move_vector.y
+        steering = mobile.move_vector.x
+    else:
+        throttle = 0.0
+        steering = 0.0
+    handbrake = mobile_brake
 
-    var forward: Vector3 = -global_transform.basis.z
-    var target_speed: float = max_speed * (1.0 + float(tuning["engine"]) * 0.08 + float(tuning["turbo"]) * 0.15)
+    var forward := -global_transform.basis.z
+    var target_speed := max_speed * (1.0 + float(tuning["engine"]) * 0.08 + float(tuning["turbo"]) * 0.15)
     if throttle < 0.0:
         target_speed = reverse_speed
 
-    var desired: Vector3 = forward * throttle * target_speed
-    var rate: float = acceleration if abs(throttle) > 0.05 else braking
+    var desired := forward * throttle * target_speed
+    var rate := acceleration if abs(throttle) > 0.05 else braking
+    if handbrake:
+        rate = braking * 1.6
     velocity.x = move_toward(velocity.x, desired.x, rate * delta)
     velocity.z = move_toward(velocity.z, desired.z, rate * delta)
 
-    var speed_factor: float = clampf(Vector2(velocity.x, velocity.z).length() / 10.0, 0.0, 1.0)
+    var speed_factor := clampf(Vector2(velocity.x, velocity.z).length() / 10.0, 0.0, 1.0)
     rotate_y(-steering * steering_strength * speed_factor * delta)
 
-    var grip: float = handbrake_traction if handbrake else traction + float(tuning["tires"])
-    var local: Vector3 = global_transform.basis.inverse() * velocity
+    var grip := handbrake_traction if handbrake else traction + float(tuning["tires"])
+    var local := global_transform.basis.inverse() * velocity
     local.x = move_toward(local.x, 0.0, grip * delta)
     velocity = global_transform.basis * local
     move_and_slide()
