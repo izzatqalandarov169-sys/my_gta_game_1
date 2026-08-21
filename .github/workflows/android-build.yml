@@ -81,9 +81,7 @@ jobs:
           test -s "$TEMPLATE_DIR/android_source.zip"
 
           # Do NOT call Godot --install-android-build-template.
-          # That editor operation is what was hanging for 5 minutes.
-          # Godot distributes the Android build template as android_source.zip,
-          # so extract it directly into the project instead.
+          # That editor operation was hanging for 5 minutes in CI.
           if [ -f android/build.gradle ] && [ -f android/settings.gradle ] && [ -f android/gradlew ]; then
             echo 'Android build template already restored; skipping extraction.'
           else
@@ -112,12 +110,18 @@ jobs:
           cat > "$HOME/.config/godot/editor_settings-4.4.tres" <<EOF
           [gd_resource type="EditorSettings" format=3]
           [resource]
-          export/android/sdk_path = "$ANDROID_HOME"
+          export/android/android_sdk_path = "$ANDROID_HOME"
           export/android/java_sdk_path = "$JAVA_HOME"
           export/android/debug_keystore = "$HOME/.android/debug.keystore"
           export/android/debug_keystore_user = "androiddebugkey"
           export/android/debug_keystore_pass = "android"
           EOF
+          echo '--- Godot Android settings ---'
+          cat "$HOME/.config/godot/editor_settings-4.4.tres"
+          test -d "$ANDROID_HOME"
+          test -d "$JAVA_HOME"
+          test -x "$ANDROID_HOME/platform-tools/adb"
+          test -x "$JAVA_HOME/bin/java"
 
       - name: Validate project before export
         timeout-minutes: 3
