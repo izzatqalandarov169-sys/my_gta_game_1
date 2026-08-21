@@ -68,6 +68,21 @@ func unlock_item(player_id: String, item_type: String, item_id: String, reason: 
     save_state()
     return true
 
+func buy_item(player_id: String, item_type: String, item_id: String, price_uzs: int) -> Dictionary:
+    if bans.has(player_id):
+        return {"ok": false, "reason": "banned"}
+    if item_id.strip_edges().is_empty() or price_uzs < 0:
+        return {"ok": false, "reason": "invalid_item"}
+    if has_item(player_id, item_type, item_id):
+        return {"ok": true, "reason": "already_owned", "balance_uzs": get_balance_uzs(player_id)}
+    if not spend_uzs(player_id, price_uzs, "%s:%s" % [item_type, item_id]):
+        return {"ok": false, "reason": "insufficient_funds", "balance_uzs": get_balance_uzs(player_id)}
+    if not unlock_item(player_id, item_type, item_id, "purchase"):
+        balances_uzs[player_id] = get_balance_uzs(player_id) + price_uzs
+        save_state()
+        return {"ok": false, "reason": "unlock_failed"}
+    return {"ok": true, "reason": "purchased", "balance_uzs": get_balance_uzs(player_id)}
+
 func has_item(player_id: String, item_type: String, item_id: String) -> bool:
     if item_type == "vehicle":
         return unlocked_vehicles.get(player_id, {}).has(item_id)
