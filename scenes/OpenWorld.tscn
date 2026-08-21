@@ -1,6 +1,7 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/open_world_controller.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/camera_fix.gd" id="2_fix"]
 
 [sub_resource type="Environment" id="Environment_fallback"]
 background_mode = 1
@@ -19,6 +20,9 @@ roughness = 0.95
 [node name="OpenWorld" type="Node3D"]
 script = ExtResource("1_main")
 
+[node name="CameraFix" type="Node" parent="."]
+script = ExtResource("2_fix")
+
 [node name="FallbackEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_fallback")
 
@@ -34,6 +38,6 @@ position = Vector3(0, -0.6, 0)
 
 [node name="FallbackCamera" type="Camera3D" parent="."]
 position = Vector3(0, 5, 12)
-rotation_degrees = Vector3(-12, 180, 0)
+rotation_degrees = Vector3(-12, 0, 0)
 fov = 65
 current = true
