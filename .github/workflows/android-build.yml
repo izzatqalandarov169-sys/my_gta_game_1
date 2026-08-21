@@ -41,25 +41,41 @@ jobs:
           rsvg-convert -w 1080 -h 1920 assets/splash.svg -o assets/splash.png
           file assets/splash.png
 
+      - name: Restore Godot caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local/share/godot/export_templates/4.4.1.stable
+            android
+          key: godot-android-4.4.1-${{ hashFiles('project.godot', 'export_presets.cfg', 'scripts/*.gd') }}
+          restore-keys: |
+            godot-android-4.4.1-
+
       - name: Install Godot 4.4.1 and export templates
         timeout-minutes: 5
         run: |
-          wget -q --show-progress https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip
-          unzip -q Godot_v4.4.1-stable_linux.x86_64.zip -d godot
-          chmod +x godot/Godot_v4.4.1-stable_linux.x86_64
-          wget -q --show-progress https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz
-          rm -rf /tmp/godot-templates "$HOME/.local/share/godot/export_templates/4.4.1.stable"
-          mkdir -p /tmp/godot-templates "$HOME/.local/share/godot/export_templates/4.4.1.stable"
-          unzip -q Godot_v4.4.1-stable_export_templates.tpz -d /tmp/godot-templates
-          cp -r /tmp/godot-templates/templates/* "$HOME/.local/share/godot/export_templates/4.4.1.stable/"
-          printf '4.4.1.stable\n' > "$HOME/.local/share/godot/export_templates/4.4.1.stable/version.txt"
+          if [ ! -x godot/Godot_v4.4.1-stable_linux.x86_64 ]; then
+            wget -q --show-progress https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip
+            unzip -q Godot_v4.4.1-stable_linux.x86_64.zip -d godot
+            chmod +x godot/Godot_v4.4.1-stable_linux.x86_64
+          fi
+          if [ ! -s "$HOME/.local/share/godot/export_templates/4.4.1.stable/android_debug.apk" ]; then
+            wget -q --show-progress https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz
+            rm -rf /tmp/godot-templates
+            mkdir -p /tmp/godot-templates "$HOME/.local/share/godot/export_templates/4.4.1.stable"
+            unzip -q Godot_v4.4.1-stable_export_templates.tpz -d /tmp/godot-templates
+            cp -r /tmp/godot-templates/templates/* "$HOME/.local/share/godot/export_templates/4.4.1.stable/"
+            printf '4.4.1.stable\n' > "$HOME/.local/share/godot/export_templates/4.4.1.stable/version.txt"
+          fi
           test -s "$HOME/.local/share/godot/export_templates/4.4.1.stable/android_debug.apk"
           test -s "$HOME/.local/share/godot/export_templates/4.4.1.stable/android_source.zip"
 
       - name: Configure debug keystore
         run: |
           mkdir -p "$HOME/.android"
-          keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          if [ ! -s "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          fi
           test -s "$HOME/.android/debug.keystore"
 
       - name: Configure Godot Android settings
@@ -75,15 +91,19 @@ jobs:
           export/android/debug_keystore_pass = "android"
           EOF
 
-      - name: Install Godot Android project template
+      - name: Install Godot Android project template only when missing
         timeout-minutes: 5
         run: |
-          rm -rf android
-          godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --editor --install-android-build-template
+          if [ -f android/build.gradle ] && [ -f android/settings.gradle ] && [ -f android/gradlew ]; then
+            echo 'Android project template restored from cache; skipping installation.'
+          else
+            rm -rf android
+            godot/Godot_v4.4.1-stable_linux.x86_64 --headless --path . --editor --install-android-build-template
+          fi
           test -f android/build.gradle
           test -f android/settings.gradle
-          test -x android/gradlew || chmod +x android/gradlew
           test -f android/gradlew
+          chmod +x android/gradlew
 
       - name: Validate project before export
         timeout-minutes: 3
